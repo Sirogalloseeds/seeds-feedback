@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seeds - Comparación de Reportes de Feedback</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .reports-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .report {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .report:hover {
+            transform: translateY(-5px);
+        }
+        
+        .report-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .report-type {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .version-a .report-type {
+            color: #3498db;
+        }
+        
+        .version-b .report-type {
+            color: #e74c3c;
+        }
+        
+        .report-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .version-a .report-badge {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .version-b .report-badge {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .report-content {
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .report-content h3 {
+            color: #2c3e50;
+            margin: 20px 0 10px 0;
+            font-size: 1.1em;
+        }
+        
+        .report-content h3:first-child {
+            margin-top: 0;
+        }
+        
+        .stars {
+            color: #f39c12;
+            margin-left: 10px;
+        }
+        
+        .feedback-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .feedback-form h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .radio-option:hover {
+            border-color: #3498db;
+            background-color: #f8f9fa;
+        }
+        
+        .radio-option input[type="radio"] {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+        
+        .radio-option.selected {
+            border-color: #3498db;
+            background-color: #e3f2fd;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #27ae60);
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .reports-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .report {
+                padding: 20px;
+            }
+            
+            .feedback-section {
+                padding: 20px;
+            }
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #c3e6cb;
+            text-align: center;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #f5c6cb;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 Seeds - Feedback de Entrevista</h1>
+            <p>Hemos preparado dos versiones de tu reporte de feedback. Tu opinión nos ayuda a mejorar la experiencia para futuros candidatos.</p>
+        </div>
+        
+        <div class="reports-container">
+            <!-- Reporte Versión A -->
+            <div class="report version-a">
+                <div class="report-header">
+                    <span class="report-type">Versión A</span>
+                    <span class="report-badge">Analítico</span>
+                </div>
+                <div class="report-content" id="reportA">
+                    <!-- El contenido se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <!-- Reporte Versión B -->
+            <div class="report version-b">
+                <div class="report-header">
+                    <span class="report-type">Versión B</span>
+                    <span class="report-badge">Humano</span>
+                </div>
+                <div class="report-content" id="reportB">
+                    <!-- El contenido se carga dinámicamente -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="feedback-section">
+            <form class="feedback-form" id="feedbackForm">
+                <h2>🗣️ Tu Opinión Importa</h2>
+                
+                <div class="form-group">
+                    <label>¿Cuál de los dos reportes te gusta más?</label>
+                    <div class="radio-group">
+                        <div class="radio-option" onclick="selectPreference('version-a')">
+                            <input type="radio" name="preference" value="version-a" id="pref-a">
+                            <label for="pref-a">Versión A - Más analítico y estructurado (con puntuaciones)</label>
+                        </div>
+                        <div class="radio-option" onclick="selectPreference('version-b')">
+                            <input type="radio" name="preference" value="version-b" id="pref-b">
+                            <label for="pref-b">Versión B - Más humano y cercano (sin puntuaciones)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reasons">¿Por qué prefieres esa versión? ¿Qué aspectos te parecieron más útiles o valiosos?</label>
+                    <textarea id="reasons" name="reasons" placeholder="Comparte tus pensamientos sobre lo que más te gustó de la versión elegida, qué encontraste más útil, o cualquier otra reflexión que quieras compartir..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="suggestions">¿Hay algo que mejorarías o agregarías a los reportes? (Opcional)</label>
+                    <textarea id="suggestions" name="suggestions" placeholder="Si tienes ideas para mejorar la experiencia de feedback, ¡nos encantaría escucharlas!"></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">Enviar Feedback</button>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Enviando tu feedback...</p>
+                </div>
+                
+                <div class="success-message" id="successMessage">
+                    <strong>¡Gracias por tu feedback!</strong><br>
+                    Tu opinión nos ayuda a mejorar la experiencia para todos los candidatos. 🙌
+                </div>
+                
+                <div class="error-message" id="errorMessage">
+                    <strong>Hubo un problema al enviar tu feedback.</strong><br>
+                    Por favor, intenta nuevamente o contacta a nuestro equipo.
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // Configuración - REEMPLAZA ESTA URL CON LA DE TU GOOGLE APPS SCRIPT
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwq7JTjH7jS97M0SrRuyJY0Kt_cDeqX7lZU6Gnot_CXMOSbfENI7OIu5tP8mZGGfI3JiQ/exec';
+        
+        // Variables globales
+        let candidateName = 'Candidato';
+        
+        // Función para obtener parámetros de la URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        
+        // Función para decodificar contenido base64
+        function decodeBase64(str) {
+            try {
+                return decodeURIComponent(atob(str));
+            } catch (e) {
+                return str;
+            }
+        }
+        
+        // Cargar contenido dinámico al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Obtener parámetros de la URL
+            candidateName = getUrlParameter('candidate') || 'Candidato';
+            const reportAContent = getUrlParameter('reportA');
+            const reportBContent = getUrlParameter('reportB');
+            
+            // Si hay contenido personalizado en la URL, usarlo
+            if (reportAContent) {
+                document.getElementById('reportA').innerHTML = decodeBase64(reportAContent);
+            } else {
+                // Contenido por defecto para Siro
+                loadDefaultReports();
+            }
+            
+            if (reportBContent) {
+                document.getElementById('reportB').innerHTML = decodeBase64(reportBContent);
+            }
+        });
+        
+        // Cargar reportes por defecto (ejemplo con Siro)
+        function loadDefaultReports() {
+            document.getElementById('reportA').innerHTML = `
+                <h3>Hola ${candidateName},</h3>
+                <p>A continuación te compartimos el feedback de tu entrevista para la posición de Product Manager.</p>
+                
+                <h3>Resumen General:</h3>
+                <p>Tu perfil muestra una sólida experiencia como Product Manager con conocimientos técnicos relevantes en integración de sistemas y desarrollo de productos digitales. Has demostrado capacidad para trabajar en entornos ágiles y orientarte a resultados medibles, con experiencia específica en las industrias que te interesan.</p>
+                
+                <h3>Evaluación por Dimensiones:</h3>
+                <p>• <strong>Claridad en la comunicación:</strong> <span class="stars">⭐⭐⭐⭐</span> (4/5)<br>
+                • <strong>Profundidad en la experiencia:</strong> <span class="stars">⭐⭐⭐⭐</span> (4/5)<br>
+                • <strong>Explicación de logros e impacto:</strong> <span class="stars">⭐⭐⭐⭐⭐</span> (5/5)<br>
+                • <strong>Inglés conversacional:</strong> <span class="stars">⭐⭐⭐</span> (3/5)<br>
+                • <strong>Orientación a datos:</strong> <span class="stars">⭐⭐⭐⭐⭐</span> (5/5)<br>
+                • <strong>Colaboración con equipos:</strong> <span class="stars">⭐⭐⭐⭐</span> (4/5)</p>
+                
+                <h3>Fortalezas:</h3>
+                <p>• Enfoque data-driven para la toma de decisiones<br>
+                • Experiencia concreta resolviendo problemas complejos de integración<br>
+                • Capacidad para identificar y resolver puntos críticos en funnels de conversión<br>
+                • Conocimiento técnico sólido en APIs, extensiones de Chrome y AI/ML<br>
+                • Experiencia trabajando con metodologías ágiles (Scrum)</p>
+                
+                <h3>Oportunidades de Mejora:</h3>
+                <p>• Desarrollar mayor fluidez y precisión en comunicación en inglés<br>
+                • Ampliar vocabulario técnico en inglés para conversaciones más fluidas<br>
+                • Practicar la estructuración de respuestas para mayor claridad expositiva</p>
+                
+                <h3>Sugerencias:</h3>
+                <p>• Realizar práctica conversacional en inglés enfocada en terminología de producto<br>
+                • Considerar cursos de Business English para mejorar la comunicación profesional<br>
+                • Practicar presentaciones de casos de estudio para mejorar la narrativa de logros</p>
+                
+                <p><em>Este feedback ha sido generado automáticamente para apoyar tu desarrollo profesional.</em></p>
+            `;
+            
+            document.getElementById('reportB').innerHTML = `
+                <h3>¡Hola ${candidateName}!</h3>
+                <p>¡Qué gusto fue conocerte en la entrevista! Queremos compartir contigo algunas reflexiones sobre tu perfil y experiencia.</p>
+                
+                <h3>Resumen General:</h3>
+                <p>Nos encanta ver tu pasión por el producto y tu enfoque estratégico. Tu recorrido muestra a alguien que realmente entiende el impacto del Product Management y que sabe conectar la visión estratégica con la ejecución práctica. Se nota que disfrutás trabajando cerca de los equipos técnicos y que tenés una mentalidad muy orientada a resultados.</p>
+                
+                <h3>Fortalezas que nos llamaron la atención:</h3>
+                <p>Tu capacidad para tomar decisiones basadas en datos es realmente impresionante. Los casos que compartiste, especialmente el de la mejora del funnel de conversión en Seeds, muestran que sabés identificar problemas reales y encontrar soluciones creativas e impactantes. También nos gustó mucho cómo pensás en el usuario final y cómo buscás constantemente optimizar su experiencia.</p>
+                
+                <h3>Áreas donde podés seguir creciendo:</h3>
+                <p>Creemos que con un poco más de práctica en inglés vas a estar aún mejor preparado para roles internacionales. Tu conocimiento técnico es sólido, solo necesitás ganar confianza para expresarlo con mayor fluidez en inglés.</p>
+                
+                <h3>Algunas ideas para seguir desarrollándote:</h3>
+                <p>Considerá dedicar un tiempo a practicar conversaciones en inglés, especialmente en contextos profesionales. Esto te va a abrir muchas más oportunidades en el mundo tech. También podría ser útil practicar cómo contar tus historias de éxito de manera aún más estructurada.</p>
+                
+                <p>¡Estamos seguros de que vas a encontrar el rol perfecto donde puedas seguir creciendo! Gracias por tu tiempo y energía en la entrevista.</p>
+            `;
+        }
+        
+        function selectPreference(version) {
+            // Remove selected class from all options
+            document.querySelectorAll('.radio-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            event.currentTarget.classList.add('selected');
+            
+            // Check the radio button
+            document.querySelector(`input[value="${version}"]`).checked = true;
+        }
+        
+        document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const preference = document.querySelector('input[name="preference"]:checked')?.value;
+            const reasons = document.getElementById('reasons').value;
+            const suggestions = document.getElementById('suggestions').value;
+            
+            if (!preference) {
+                alert('Por favor, selecciona qué versión prefieres.');
+                return;
+            }
+            
+            if (!reasons.trim()) {
+                alert('Por favor, comparte por qué prefieres esa versión.');
+                return;
+            }
+            
+            // Mostrar loading
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('loading').style.display = 'block';
+            
+            // Preparar datos
+            const feedbackData = {
+                candidateName: candidateName,
+                preferredVersion: preference,
+                reasons: reasons,
+                suggestions: suggestions,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent
+            };
+            
+            try {
+                // Enviar a Google Sheets
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(feedbackData)
+                });
+                
+                // Como usamos no-cors, asumimos que fue exitoso
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('feedbackForm').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'block';
+                
+                // Scroll al mensaje de éxito
+                document.getElementById('successMessage').scrollIntoView({ 
+                    behavior: 'smooth' 
+                });
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
