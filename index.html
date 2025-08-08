@@ -554,474 +554,6 @@
             <div class="logo">
                 <img src="https://i.imgur.com/UYZQ0Ck.png" alt="Seeds Logo">
             </div>
-    
-    <script>
-        // Configuración - REEMPLAZA ESTA URL CON LA DE TU GOOGLE APPS SCRIPT
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwq7JTjH7jS97M0SrRuyJY0Kt_cDeqX7lZU6Gnot_CXMOSbfENI7OIu5tP8mZGGfI3JiQ/exec';
-        
-        // Variables globales
-        let candidateName = 'Candidato';
-        let interviewData = {}; // Para almacenar datos de la encuesta de entrevista
-        
-        // Función para obtener parámetros de la URL
-        function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            const results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        }
-        
-        // Función para decodificar contenido base64
-        function decodeBase64(str) {
-            try {
-                return decodeURIComponent(atob(str));
-            } catch (e) {
-                return str;
-            }
-        }
-        
-        // Cargar contenido dinámico al cargar la página
-        document.addEventListener('DOMContentLoaded', function() {
-            // Obtener parámetros de la URL
-            candidateName = getUrlParameter('candidate') || 'Candidato';
-            const reportAContent = getUrlParameter('reportA');
-            const reportBContent = getUrlParameter('reportB');
-            const reportId = getUrlParameter('id');
-            
-            // Actualizar el nombre en el header si es necesario
-            const headerTitle = document.querySelector('.header h1');
-            if (candidateName !== 'Candidato') {
-                headerTitle.textContent = `Hola ${candidateName.split(' ')[0]}, tu experiencia con Seeds`;
-            }
-            
-            // Si hay un ID, cargar desde localStorage
-            if (reportId) {
-                loadReportsFromLocalStorage(reportId);
-            }
-            // Si hay contenido personalizado en la URL, usarlo
-            else if (reportAContent) {
-                document.getElementById('reportA').innerHTML = decodeBase64(reportAContent);
-                if (reportBContent) {
-                    document.getElementById('reportB').innerHTML = decodeBase64(reportBContent);
-                }
-            } else {
-                // Contenido por defecto
-                loadDefaultReports();
-            }
-            
-            // Configurar el event listener para el formulario final
-            const reportForm = document.getElementById('reportFeedbackForm');
-            if (reportForm) {
-                reportForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    // Validar el formulario
-                    if (!validateReportForm()) {
-                        return; // No continuar si hay errores
-                    }
-                    
-                    // Si llegamos aquí, la validación pasó
-                    const preference = document.querySelector('input[name="preference"]:checked').value;
-                    const recordingInterest = document.querySelector('input[name="recording_interest"]:checked').value;
-                    const reasons = document.getElementById('reasons').value.trim();
-                    const suggestions = document.getElementById('suggestions').value;
-                    
-                    // Mostrar loading
-                    document.getElementById('reportLoading').style.display = 'block';
-                    document.querySelector('#reportFeedbackForm .btn').disabled = true;
-                    
-                    // Combinar todos los datos
-                    const completeData = {
-                        candidateName: candidateName,
-                        // Datos de entrevista
-                        ...interviewData,
-                        // Datos de reportes
-                        preferredVersion: preference,
-                        recordingInterest: recordingInterest,
-                        reasons: reasons,
-                        suggestions: suggestions,
-                        timestamp: new Date().toISOString(),
-                        userAgent: navigator.userAgent
-                    };
-                    
-                    try {
-                        // Enviar a Google Sheets
-                        const response = await fetch(GOOGLE_SCRIPT_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(completeData)
-                        });
-                        
-                        // Como usamos no-cors, asumimos que fue exitoso
-                        document.getElementById('reportLoading').style.display = 'none';
-                        
-                        // Ocultar el formulario pero mantener visible los reportes
-                        document.getElementById('reportFeedbackForm').style.display = 'none';
-                        document.getElementById('successMessage').style.display = 'block';
-                        
-                        // Marcar paso 2 como completado
-                        document.getElementById('step2').classList.remove('active');
-                        document.getElementById('step2').classList.add('completed');
-                        
-                        // Scroll al mensaje de éxito pero mantener reportes visibles
-                        document.getElementById('successMessage').scrollIntoView({ 
-                            behavior: 'smooth' 
-                        });
-                        
-                        // Opcional: Mostrar un mensaje temporal que los reportes siguen disponibles
-                        setTimeout(() => {
-                            window.scrollTo({ 
-                                top: document.getElementById('reportsSection').offsetTop - 100, 
-                                behavior: 'smooth' 
-                            });
-                        }, 2000);
-                        
-                    } catch (error) {
-                        console.error('Error:', error);
-                        document.getElementById('reportLoading').style.display = 'none';
-                        document.querySelector('#reportFeedbackForm .btn').disabled = false;
-                        document.getElementById('errorMessage').style.display = 'block';
-                    }
-                });
-            } else {
-                console.error('No se encontró el formulario reportFeedbackForm');
-            }
-        });
-        
-        // Función para manejar selección de radio buttons
-        function selectRadio(groupName, value) {
-            // Remover clase selected de todas las opciones del grupo
-            document.querySelectorAll(`input[name="${groupName}"]`).forEach(input => {
-                input.closest('.radio-option').classList.remove('selected');
-            });
-            
-            // Agregar clase selected a la opción clickeada
-            event.currentTarget.classList.add('selected');
-            
-            // Marcar el radio button
-            document.querySelector(`input[name="${groupName}"][value="${value}"]`).checked = true;
-        }
-        
-        // Función para mostrar errores de validación
-        function showValidationError(errorElementId, errorDetailsId, errors) {
-            const errorElement = document.getElementById(errorElementId);
-            const errorDetails = document.getElementById(errorDetailsId);
-            
-            errorDetails.innerHTML = errors.map(error => `• ${error}`).join('<br>');
-            errorElement.style.display = 'block';
-            
-            // Scroll al error
-            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Auto-ocultar después de 8 segundos
-            setTimeout(() => {
-                errorElement.style.display = 'none';
-            }, 8000);
-        }
-        
-        // Función para limpiar estilos de error
-        function clearErrorStyles() {
-            document.querySelectorAll('.radio-group.error').forEach(el => el.classList.remove('error'));
-            document.querySelectorAll('textarea.error').forEach(el => el.classList.remove('error'));
-            document.querySelectorAll('.validation-error').forEach(el => el.style.display = 'none');
-        }
-        
-        // Función de backup para manejar el envío del formulario final
-        function handleReportSubmit(e) {
-            if (e) e.preventDefault();
-            console.log('handleReportSubmit called');
-            
-            // Validar el formulario
-            if (!validateReportForm()) {
-                console.log('Validation failed');
-                return;
-            }
-            
-            console.log('Validation passed, proceeding with submit');
-            
-            // Si llegamos aquí, la validación pasó
-            const preference = document.querySelector('input[name="preference"]:checked')?.value;
-            const recordingInterest = document.querySelector('input[name="recording_interest"]:checked')?.value;
-            const reasons = document.getElementById('reasons').value.trim();
-            const suggestions = document.getElementById('suggestions').value;
-            
-            console.log('Form data:', { preference, recordingInterest, reasons });
-            
-            // Mostrar loading
-            document.getElementById('reportLoading').style.display = 'block';
-            const submitBtn = document.querySelector('#reportFeedbackForm .btn');
-            if (submitBtn) submitBtn.disabled = true;
-            
-            // Combinar todos los datos
-            const completeData = {
-                candidateName: candidateName,
-                // Datos de entrevista
-                ...interviewData,
-                // Datos de reportes
-                preferredVersion: preference,
-                recordingInterest: recordingInterest,
-                reasons: reasons,
-                suggestions: suggestions,
-                timestamp: new Date().toISOString(),
-                userAgent: navigator.userAgent
-            };
-            
-            console.log('Complete data to send:', completeData);
-            
-            try {
-                // Enviar a Google Sheets (REAL)
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(completeData)
-                });
-                
-                // Como usamos no-cors, asumimos que fue exitoso después de un delay
-                setTimeout(() => {
-                    document.getElementById('reportLoading').style.display = 'none';
-                    
-                    // Ocultar solo el formulario, mantener los reportes visibles
-                    document.getElementById('reportFeedbackForm').style.display = 'none';
-                    
-                    // Mostrar mensaje de éxito de forma más prominente
-                    const successMessage = document.getElementById('successMessage');
-                    successMessage.style.display = 'block';
-                    
-                    // Agregar animación de aparición
-                    successMessage.style.opacity = '0';
-                    successMessage.style.transform = 'translateY(20px)';
-                    successMessage.style.transition = 'all 0.5s ease-in-out';
-                    
-                    // Trigger animation
-                    setTimeout(() => {
-                        successMessage.style.opacity = '1';
-                        successMessage.style.transform = 'translateY(0)';
-                    }, 100);
-                    
-                    // Marcar paso 2 como completado
-                    document.getElementById('step2').classList.remove('active');
-                    document.getElementById('step2').classList.add('completed');
-                    
-                    // Scroll suave al mensaje de éxito con más tiempo para verlo
-                    setTimeout(() => {
-                        successMessage.scrollIntoView({ 
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-                    }, 200);
-                    
-                    // Después de 5 segundos, hacer scroll suave para mostrar que los reportes siguen disponibles
-                    setTimeout(() => {
-                        // Scroll al inicio de la sección de reportes para mostrar los tabs
-                        const reportsSection = document.getElementById('reportsSection');
-                        const tabsContainer = reportsSection.querySelector('.tabs-container');
-                        if (tabsContainer) {
-                            tabsContainer.scrollIntoView({ 
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-                        }
-                    }, 5000);
-                    
-                    console.log('Form submitted successfully to Google Sheets');
-                }, 1500); // Dar tiempo para que llegue al servidor
-                
-            } catch (error) {
-                console.error('Error enviando a Google Sheets:', error);
-                document.getElementById('reportLoading').style.display = 'none';
-                const submitBtn = document.querySelector('#reportFeedbackForm .btn');
-                if (submitBtn) submitBtn.disabled = false;
-                document.getElementById('errorMessage').style.display = 'block';
-            }
-        }
-        
-        // Función para validar formulario de reportes
-        function validateReportForm() {
-            clearErrorStyles();
-            
-            const preference = document.querySelector('input[name="preference"]:checked')?.value;
-            const recordingInterest = document.querySelector('input[name="recording_interest"]:checked')?.value;
-            // Removemos la validación de 'reasons' ya que no es obligatorio
-            
-            // Array para recopilar errores
-            const errors = [];
-            
-            // Validaciones mejoradas
-            if (!preference) {
-                errors.push('Selecciona qué versión de reporte prefieres');
-                const preferenceGroup = document.querySelector('input[name="preference"]').closest('.radio-group');
-                if (preferenceGroup) preferenceGroup.classList.add('error');
-            }
-            
-            if (!recordingInterest) {
-                errors.push('Indica si te interesa acceder a la grabación y transcript');
-                const recordingGroup = document.querySelector('input[name="recording_interest"]').closest('.radio-group');
-                if (recordingGroup) recordingGroup.classList.add('error');
-            }
-            
-            // Si hay errores, mostrarlos y devolver false
-            if (errors.length > 0) {
-                showValidationError('reportValidationError', 'reportErrorDetails', errors);
-                return false;
-            }
-            
-            return true;
-        }
-        
-        // Función para validar y enviar encuesta de entrevista
-        function submitInterviewFeedback() {
-            clearErrorStyles();
-            
-            const experienceRating = document.querySelector('input[name="experience_rating"]:checked')?.value;
-            const completedInterview = document.querySelector('input[name="completed_interview"]:checked')?.value;
-            const aiComfort = document.querySelector('input[name="ai_comfort"]:checked')?.value;
-            const additionalComments = document.getElementById('additional-comments').value;
-            
-            // Array para recopilar errores
-            const errors = [];
-            
-            // Validaciones con mensaje específico
-            if (!experienceRating) {
-                errors.push('Califica tu experiencia general con la entrevista');
-                document.querySelector('input[name="experience_rating"]').closest('.radio-group').classList.add('error');
-            }
-            
-            if (!completedInterview) {
-                errors.push('Indica si pudiste finalizar la entrevista');
-                document.querySelector('input[name="completed_interview"]').closest('.radio-group').classList.add('error');
-            }
-            
-            if (!aiComfort) {
-                errors.push('Indica cómo te sentiste conversando con la AI');
-                document.querySelector('input[name="ai_comfort"]').closest('.radio-group').classList.add('error');
-            }
-            
-            // Si hay errores, mostrarlos y no continuar
-            if (errors.length > 0) {
-                showValidationError('interviewValidationError', 'interviewErrorDetails', errors);
-                return;
-            }
-            
-            // Guardar datos de la entrevista
-            interviewData = {
-                experience_rating: experienceRating,
-                completed_interview: completedInterview,
-                ai_comfort: aiComfort,
-                additional_comments: additionalComments
-            };
-            
-            // Mostrar loading
-            document.getElementById('interviewLoading').style.display = 'block';
-            document.querySelector('#interviewSection .btn').disabled = true;
-            
-            // Simular guardado y continuar al siguiente paso
-            setTimeout(() => {
-                document.getElementById('interviewLoading').style.display = 'none';
-                goToReportsStep();
-            }, 1000);
-        }
-        
-        // Función para ir al paso de reportes
-        function goToReportsStep() {
-            // Actualizar indicadores de paso
-            document.getElementById('step1').classList.remove('active');
-            document.getElementById('step1').classList.add('completed');
-            document.getElementById('step2').classList.add('active');
-            
-            // Cambiar secciones
-            document.getElementById('interviewSection').classList.remove('active');
-            document.getElementById('reportsSection').classList.add('active');
-            
-            // Scroll al top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
-        // Función para mostrar tabs de reportes
-        function showTab(tabName) {
-            // Ocultar todos los contenidos
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Remover clase active de todas las tabs
-            document.querySelectorAll('.tab-button').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Mostrar el contenido seleccionado
-            document.getElementById(tabName).classList.add('active');
-            
-            // Agregar clase active a la tab clickeada
-            event.target.closest('.tab-button').classList.add('active');
-        }
-        
-        // Funciones para cargar reportes
-        function loadReportsFromLocalStorage(reportId) {
-            try {
-                const reportData = localStorage.getItem(reportId);
-                if (reportData) {
-                    const data = JSON.parse(reportData);
-                    document.getElementById('reportA').innerHTML = data.reportA;
-                    document.getElementById('reportB').innerHTML = data.reportB;
-                } else {
-                    showReportError();
-                }
-            } catch (error) {
-                console.error('Error loading reports:', error);
-                showReportError();
-            }
-        }
-        
-        function showReportError() {
-            const errorContent = `
-                <div style="text-align: center; padding: 60px 20px; color: #721c24; background: linear-gradient(135deg, #f8d7da, #f5c6cb); border-radius: 15px; margin: 20px 0; border-left: 4px solid #dc3545;">
-                    <h3 style="color: #721c24 !important; margin-bottom: 15px;">⚠️ No se pudieron cargar los reportes</h3>
-                    <p style="color: #721c24 !important; margin: 10px 0;">Es posible que el enlace haya expirado o que se haya abierto en un navegador diferente.</p>
-                    <p style="color: #721c24 !important;"><strong>Solución:</strong> Contacta al equipo de Seeds para recibir un nuevo enlace.</p>
-                </div>
-            `;
-            
-            document.getElementById('reportA').innerHTML = errorContent;
-            document.getElementById('reportB').innerHTML = errorContent;
-        }
-        
-        function loadDefaultReports() {
-            document.getElementById('reportA').innerHTML = `
-                <h3>Hola ${candidateName},</h3>
-                <p>A continuación te compartimos el feedback de tu entrevista para la posición de Product Manager.</p>
-                
-                <h3>Resumen General:</h3>
-                <p>Tu perfil muestra una sólida experiencia como Product Manager con conocimientos técnicos relevantes en integración de sistemas y desarrollo de productos digitales.</p>
-                
-                <h3>Evaluación por Dimensiones:</h3>
-                <ul>
-                <li><strong>Claridad en la comunicación:</strong> <span class="stars">⭐⭐⭐⭐</span> (4/5)</li>
-                <li><strong>Profundidad en la experiencia:</strong> <span class="stars">⭐⭐⭐⭐</span> (4/5)</li>
-                <li><strong>Explicación de logros e impacto:</strong> <span class="stars">⭐⭐⭐⭐⭐</span> (5/5)</li>
-                </ul>
-                
-                <p><em>Este feedback ha sido generado automáticamente para apoyar tu desarrollo profesional.</em></p>
-            `;
-            
-            document.getElementById('reportB').innerHTML = `
-                <h3>¡Hola ${candidateName}!</h3>
-                <p>¡Qué gusto fue conocerte en la entrevista! Queremos compartir contigo algunas reflexiones sobre tu perfil y experiencia.</p>
-                
-                <h3>Fortalezas que nos llamaron la atención:</h3>
-                <p>Tu capacidad para tomar decisiones basadas en datos es realmente impresionante. Se nota que disfrutás trabajando cerca de los equipos técnicos.</p>
-                
-                <p>¡Estamos seguros de que vas a encontrar el rol perfecto! Gracias por tu tiempo y energía en la entrevista.</p>
-            `;
-        }
-    </script>
-</body>
-</html>
             <h1>Tu Experiencia con Seeds</h1>
             <p>Queremos conocer tu opinión sobre la entrevista y compartir contigo tu reporte de feedback personalizado.</p>
         </div>
@@ -1222,7 +754,7 @@
                         <textarea id="suggestions" name="suggestions" placeholder="Si tienes ideas para mejorar la experiencia de feedback, ¡nos encantaría escucharlas!"></textarea>
                     </div>
                     
-                    <button type="submit" class="btn" onclick="handleReportSubmit(event)">
+                    <button type="button" class="btn" onclick="handleReportSubmit(event)">
                         Enviar Todo mi Feedback
                     </button>
                     
@@ -1236,13 +768,6 @@
                         <p>Enviando tu feedback completo...</p>
                     </div>
                     
-                    <div class="success-message" id="successMessage">
-                        <strong>🎉 ¡Gracias por completar toda la encuesta!</strong><br><br>
-                        Tu feedback sobre la entrevista con AI y los reportes nos ayuda enormemente a mejorar la experiencia para futuros candidatos. 🙌
-                        <br><br>
-                        <em style="color: var(--seeds-primary-dark); font-weight: 600;">💡 Puedes seguir consultando tus reportes de feedback arriba cuando quieras.</em>
-                    </div>
-                    
                     <div class="error-message" id="errorMessage">
                         <strong>Hubo un problema al enviar tu feedback.</strong><br>
                         Por favor, intenta nuevamente o contacta a nuestro equipo.
@@ -1251,3 +776,419 @@
             </div>
         </div>
     </div>
+    
+    <script>
+        // Configuración - REEMPLAZA ESTA URL CON LA DE TU GOOGLE APPS SCRIPT
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwq7JTjH7jS97M0SrRuyJY0Kt_cDeqX7lZU6Gnot_CXMOSbfENI7OIu5tP8mZGGfI3JiQ/exec';
+        
+        // Variables globales
+        let candidateName = 'Candidato';
+        let interviewData = {}; // Para almacenar datos de la encuesta de entrevista
+        
+        // Función para obtener parámetros de la URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        
+        // Función para decodificar contenido base64
+        function decodeBase64(str) {
+            try {
+                return decodeURIComponent(atob(str));
+            } catch (e) {
+                return str;
+            }
+        }
+        
+        // Función para manejar selección de radio buttons
+        function selectRadio(groupName, value) {
+            // Remover clase selected de todas las opciones del grupo
+            document.querySelectorAll(`input[name="${groupName}"]`).forEach(input => {
+                input.closest('.radio-option').classList.remove('selected');
+            });
+            
+            // Agregar clase selected a la opción clickeada
+            event.currentTarget.classList.add('selected');
+            
+            // Marcar el radio button
+            document.querySelector(`input[name="${groupName}"][value="${value}"]`).checked = true;
+        }
+        
+        // Función para mostrar errores de validación
+        function showValidationError(errorElementId, errorDetailsId, errors) {
+            const errorElement = document.getElementById(errorElementId);
+            const errorDetails = document.getElementById(errorDetailsId);
+            
+            errorDetails.innerHTML = errors.map(error => `• ${error}`).join('<br>');
+            errorElement.style.display = 'block';
+            
+            // Scroll al error
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Auto-ocultar después de 8 segundos
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 8000);
+        }
+        
+        // Función para limpiar estilos de error
+        function clearErrorStyles() {
+            document.querySelectorAll('.radio-group.error').forEach(el => el.classList.remove('error'));
+            document.querySelectorAll('textarea.error').forEach(el => el.classList.remove('error'));
+            document.querySelectorAll('.validation-error').forEach(el => el.style.display = 'none');
+        }
+        
+        // Función para validar y enviar encuesta de entrevista
+        function submitInterviewFeedback() {
+            clearErrorStyles();
+            
+            const experienceRating = document.querySelector('input[name="experience_rating"]:checked')?.value;
+            const completedInterview = document.querySelector('input[name="completed_interview"]:checked')?.value;
+            const aiComfort = document.querySelector('input[name="ai_comfort"]:checked')?.value;
+            const additionalComments = document.getElementById('additional-comments').value;
+            
+            // Array para recopilar errores
+            const errors = [];
+            
+            // Validaciones con mensaje específico
+            if (!experienceRating) {
+                errors.push('Califica tu experiencia general con la entrevista');
+                document.querySelector('input[name="experience_rating"]').closest('.radio-group').classList.add('error');
+            }
+            
+            if (!completedInterview) {
+                errors.push('Indica si pudiste finalizar la entrevista');
+                document.querySelector('input[name="completed_interview"]').closest('.radio-group').classList.add('error');
+            }
+            
+            if (!aiComfort) {
+                errors.push('Indica cómo te sentiste conversando con la AI');
+                document.querySelector('input[name="ai_comfort"]').closest('.radio-group').classList.add('error');
+            }
+            
+            // Si hay errores, mostrarlos y no continuar
+            if (errors.length > 0) {
+                showValidationError('interviewValidationError', 'interviewErrorDetails', errors);
+                return;
+            }
+            
+            // Guardar datos de la entrevista
+            interviewData = {
+                experience_rating: experienceRating,
+                completed_interview: completedInterview,
+                ai_comfort: aiComfort,
+                additional_comments: additionalComments
+            };
+            
+            // Mostrar loading
+            document.getElementById('interviewLoading').style.display = 'block';
+            document.querySelector('#interviewSection .btn').disabled = true;
+            
+            // Simular guardado y continuar al siguiente paso
+            setTimeout(() => {
+                document.getElementById('interviewLoading').style.display = 'none';
+                goToReportsStep();
+            }, 1000);
+        }
+        
+        // Función para ir al paso de reportes
+        function goToReportsStep() {
+            // Actualizar indicadores de paso
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step1').classList.add('completed');
+            document.getElementById('step2').classList.add('active');
+            
+            // Cambiar secciones
+            document.getElementById('interviewSection').classList.remove('active');
+            document.getElementById('reportsSection').classList.add('active');
+            
+            // Scroll al top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // Función para mostrar tabs de reportes
+        function showTab(tabName) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remover clase active de todas las tabs
+            document.querySelectorAll('.tab-button').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostrar el contenido seleccionado
+            document.getElementById(tabName).classList.add('active');
+            
+            // Agregar clase active a la tab clickeada
+            event.target.closest('.tab-button').classList.add('active');
+        }
+        
+        // Función para validar formulario de reportes
+        function validateReportForm() {
+            clearErrorStyles();
+            
+            const preference = document.querySelector('input[name="preference"]:checked')?.value;
+            const recordingInterest = document.querySelector('input[name="recording_interest"]:checked')?.value;
+            
+            // Array para recopilar errores
+            const errors = [];
+            
+            // Validaciones mejoradas
+            if (!preference) {
+                errors.push('Selecciona qué versión de reporte prefieres');
+                const preferenceGroup = document.querySelector('input[name="preference"]').closest('.radio-group');
+                if (preferenceGroup) preferenceGroup.classList.add('error');
+            }
+            
+            if (!recordingInterest) {
+                errors.push('Indica si te interesa acceder a la grabación y transcript');
+                const recordingGroup = document.querySelector('input[name="recording_interest"]').closest('.radio-group');
+                if (recordingGroup) recordingGroup.classList.add('error');
+            }
+            
+            // Si hay errores, mostrarlos y devolver false
+            if (errors.length > 0) {
+                showValidationError('reportValidationError', 'reportErrorDetails', errors);
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Función de backup para manejar el envío del formulario final
+        function handleReportSubmit(e) {
+            if (e) e.preventDefault();
+            console.log('handleReportSubmit called');
+            
+            // Validar el formulario
+            if (!validateReportForm()) {
+                console.log('Validation failed');
+                return;
+            }
+            
+            console.log('Validation passed, proceeding with submit');
+            
+            // Si llegamos aquí, la validación pasó
+            const preference = document.querySelector('input[name="preference"]:checked')?.value;
+            const recordingInterest = document.querySelector('input[name="recording_interest"]:checked')?.value;
+            const reasons = document.getElementById('reasons').value.trim();
+            const suggestions = document.getElementById('suggestions').value;
+            
+            console.log('Form data:', { preference, recordingInterest, reasons });
+            
+            // Mostrar loading
+            document.getElementById('reportLoading').style.display = 'block';
+            const submitBtn = document.querySelector('#reportFeedbackForm .btn');
+            if (submitBtn) submitBtn.disabled = true;
+            
+            // Combinar todos los datos
+            const completeData = {
+                candidateName: candidateName,
+                // Datos de entrevista
+                ...interviewData,
+                // Datos de reportes
+                preferredVersion: preference,
+                recordingInterest: recordingInterest,
+                reasons: reasons,
+                suggestions: suggestions,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent
+            };
+            
+            console.log('Complete data to send:', completeData);
+            
+            // Envío real al Google Script
+            sendToGoogleSheets(completeData);
+        }
+        
+        // Función para enviar datos a Google Sheets
+        async function sendToGoogleSheets(completeData) {
+            try {
+                console.log('Enviando datos a:', GOOGLE_SCRIPT_URL);
+                
+                // Detectar si estamos en local para modo de prueba
+                const isLocal = window.location.protocol === 'file:' || 
+                                window.location.hostname === 'localhost' || 
+                                window.location.hostname === '127.0.0.1';
+                
+                if (isLocal) {
+                    console.log('🧪 MODO DE PRUEBA - Simulando envío porque estás en local');
+                    console.log('📊 Datos que se enviarían:', completeData);
+                    
+                    // Simular éxito en local
+                    setTimeout(() => {
+                        showSuccessMessage();
+                        console.log('✅ En producción, estos datos se guardarían en Google Sheets');
+                    }, 1500);
+                    return;
+                }
+                
+                // Envío real en producción
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(completeData)
+                });
+                
+                console.log('Fetch completed, assuming success due to no-cors mode');
+                
+                setTimeout(() => {
+                    showSuccessMessage();
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error enviando a Google Sheets:', error);
+                document.getElementById('reportLoading').style.display = 'none';
+                const submitBtn = document.querySelector('#reportFeedbackForm .btn');
+                if (submitBtn) submitBtn.disabled = false;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+        
+        // Función para mostrar mensaje de éxito
+        function showSuccessMessage() {
+            document.getElementById('reportLoading').style.display = 'none';
+            
+            // Ocultar solo el formulario, mantener los reportes visibles
+            document.getElementById('reportFeedbackForm').style.display = 'none';
+            
+            // Mostrar mensaje de éxito de forma más prominente
+            const successMessage = document.getElementById('successMessage');
+            successMessage.style.display = 'block';
+            
+            // Agregar animación de aparición
+            successMessage.style.opacity = '0';
+            successMessage.style.transform = 'translateY(20px)';
+            successMessage.style.transition = 'all 0.5s ease-in-out';
+            
+            // Trigger animation
+            setTimeout(() => {
+                successMessage.style.opacity = '1';
+                successMessage.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Marcar paso 2 como completado
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step2').classList.add('completed');
+            
+            // Scroll suave al mensaje de éxito
+            setTimeout(() => {
+                successMessage.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }, 200);
+            
+            // Después de 5 segundos, hacer scroll para mostrar que los reportes siguen disponibles
+            setTimeout(() => {
+                const reportsSection = document.getElementById('reportsSection');
+                const tabsContainer = reportsSection.querySelector('.tabs-container');
+                if (tabsContainer) {
+                    tabsContainer.scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }, 5000);
+            
+            console.log('Form submitted successfully');
+        }
+        
+        // Cargar contenido dinámico al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Obtener parámetros de la URL
+            candidateName = getUrlParameter('candidate') || 'Candidato';
+            const reportAContent = getUrlParameter('reportA');
+            const reportBContent = getUrlParameter('reportB');
+            const reportId = getUrlParameter('id');
+            
+            // Actualizar el nombre en el header si es necesario
+            const headerTitle = document.querySelector('.header h1');
+            if (candidateName !== 'Candidato') {
+                headerTitle.textContent = `Hola ${candidateName.split(' ')[0]}, tu experiencia con Seeds`;
+            }
+            
+            // Si hay un ID, cargar desde localStorage
+            if (reportId) {
+                loadReportsFromLocalStorage(reportId);
+            }
+            // Si hay contenido personalizado en la URL, usarlo
+            else if (reportAContent) {
+                document.getElementById('reportA').innerHTML = decodeBase64(reportAContent);
+                if (reportBContent) {
+                    document.getElementById('reportB').innerHTML = decodeBase64(reportBContent);
+                }
+            } else {
+                // Contenido por defecto
+                loadDefaultReports();
+            }
+        });
+        
+        // Funciones para cargar reportes
+        function loadReportsFromLocalStorage(reportId) {
+            try {
+                const reportData = localStorage.getItem(reportId);
+                if (reportData) {
+                    const data = JSON.parse(reportData);
+                    document.getElementById('reportA').innerHTML = data.reportA;
+                    document.getElementById('reportB').innerHTML = data.reportB;
+                } else {
+                    showReportError();
+                }
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                showReportError();
+            }
+        }
+        
+        function showReportError() {
+            const errorContent = `
+                <div style="text-align: center; padding: 60px 20px; color: #721c24; background: linear-gradient(135deg, #f8d7da, #f5c6cb); border-radius: 15px; margin: 20px 0; border-left: 4px solid #dc3545;">
+                    <h3 style="color: #721c24 !important; margin-bottom: 15px;">⚠️ No se pudieron cargar los reportes</h3>
+                    <p style="color: #721c24 !important; margin: 10px 0;">Es posible que el enlace haya expirado o que se haya abierto en un navegador diferente.</p>
+                    <p style="color: #721c24 !important;"><strong>Solución:</strong> Contacta al equipo de Seeds para recibir un nuevo enlace.</p>
+                </div>
+            `;
+            
+            document.getElementById('reportA').innerHTML = errorContent;
+            document.getElementById('reportB').innerHTML = errorContent;
+        }
+        
+        function loadDefaultReports() {
+            document.getElementById('reportA').innerHTML = `
+                <h3>Hola ${candidateName},</h3>
+                <p>A continuación te compartimos el feedback de tu entrevista para la posición de Product Manager.</p>
+                
+                <h3>Resumen General:</h3>
+                <p>Tu perfil muestra una sólida experiencia como Product Manager con conocimientos técnicos relevantes en integración de sistemas y desarrollo de productos digitales.</p>
+                
+                <h3>Evaluación por Dimensiones:</h3>
+                <ul>
+                <li><strong>Claridad en la comunicación:</strong> <span class="stars">⭐⭐⭐⭐</span> (4/5)</li>
+                <li><strong>Profundidad en la experiencia:</strong> <span class="stars">⭐⭐⭐⭐</span> (4/5)</li>
+                <li><strong>Explicación de logros e impacto:</strong> <span class="stars">⭐⭐⭐⭐⭐</span> (5/5)</li>
+                </ul>
+                
+                <p><em>Este feedback ha sido generado automáticamente para apoyar tu desarrollo profesional.</em></p>
+            `;
+            
+            document.getElementById('reportB').innerHTML = `
+                <h3>¡Hola ${candidateName}!</h3>
+                <p>¡Qué gusto fue conocerte en la entrevista! Queremos compartir contigo algunas reflexiones sobre tu perfil y experiencia.</p>
+                
+                <h3>Fortalezas que nos llamaron la atención:</h3>
+                <p>Tu capacidad para tomar decisiones basadas en datos es realmente impresionante. Se nota que disfrutás trabajando cerca de los equipos técnicos.</p>
+                
+                <p>¡Estamos seguros de que vas a encontrar el rol perfecto! Gracias por tu tiempo y energía en la entrevista.</p>
+            `;
+        }
+    </script>
+</body>
+</html>
