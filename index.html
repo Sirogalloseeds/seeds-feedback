@@ -1054,47 +1054,61 @@
         
         // Función para mostrar mensaje de éxito
         function showSuccessMessage() {
-            document.getElementById('reportLoading').style.display = 'none';
-            
-            // Ocultar solo el formulario, mantener los reportes visibles
-            document.getElementById('reportFeedbackForm').style.display = 'none';
-            
-            // Mostrar mensaje de éxito de forma más prominente
+            const reportLoading = document.getElementById('reportLoading');
+            const reportForm = document.getElementById('reportFeedbackForm');
             const successMessage = document.getElementById('successMessage');
-            successMessage.style.display = 'block';
+            const step2 = document.getElementById('step2');
             
-            // Agregar animación de aparición
-            successMessage.style.opacity = '0';
-            successMessage.style.transform = 'translateY(20px)';
-            successMessage.style.transition = 'all 0.5s ease-in-out';
+            // Verificar que todos los elementos existan antes de usarlos
+            if (reportLoading) {
+                reportLoading.style.display = 'none';
+            }
             
-            // Trigger animation
-            setTimeout(() => {
-                successMessage.style.opacity = '1';
-                successMessage.style.transform = 'translateY(0)';
-            }, 100);
+            if (reportForm) {
+                reportForm.style.display = 'none';
+            }
             
-            // Marcar paso 2 como completado
-            document.getElementById('step2').classList.remove('active');
-            document.getElementById('step2').classList.add('completed');
+            if (successMessage) {
+                // Mostrar mensaje de éxito de forma más prominente
+                successMessage.style.display = 'block';
+                
+                // Agregar animación de aparición
+                successMessage.style.opacity = '0';
+                successMessage.style.transform = 'translateY(20px)';
+                successMessage.style.transition = 'all 0.5s ease-in-out';
+                
+                // Trigger animation
+                setTimeout(() => {
+                    successMessage.style.opacity = '1';
+                    successMessage.style.transform = 'translateY(0)';
+                }, 100);
+                
+                // Scroll suave al mensaje de éxito
+                setTimeout(() => {
+                    successMessage.scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }, 200);
+            }
             
-            // Scroll suave al mensaje de éxito
-            setTimeout(() => {
-                successMessage.scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }, 200);
+            if (step2) {
+                // Marcar paso 2 como completado
+                step2.classList.remove('active');
+                step2.classList.add('completed');
+            }
             
             // Después de 5 segundos, hacer scroll para mostrar que los reportes siguen disponibles
             setTimeout(() => {
                 const reportsSection = document.getElementById('reportsSection');
-                const tabsContainer = reportsSection.querySelector('.tabs-container');
-                if (tabsContainer) {
-                    tabsContainer.scrollIntoView({ 
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                if (reportsSection) {
+                    const tabsContainer = reportsSection.querySelector('.tabs-container');
+                    if (tabsContainer) {
+                        tabsContainer.scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
                 }
             }, 5000);
             
